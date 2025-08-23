@@ -1,0 +1,74 @@
+# .github/workflows/release.yml
+# -----------------------------------------------------------------
+# 这是驱动自动化流程的"引擎"。
+
+name: Build and Publish with FastForge
+
+# 触发条件：仅在推送 vX.Y.Z 格式的 tag 时触发
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch: # 也允许手动触发
+
+jobs:
+  build_and_publish:
+    name: Build and Publish for ${{ matrix.target }}
+    # 在不同平台的虚拟机上并行运行
+    runs-on: ${{ matrix.os }}
+
+    # 关键：必须赋予工作流向仓库写入内容的权限，以便创建 Release
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false # 防止一个平台的失败导致其他平台任务被取消
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: macos-latest
+            target: macos
+          - os: windows-latest
+            target: windows
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 设置 Flutter 环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      # 3. 获取项目依赖
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 4. (仅 Linux) 安装桌面应用构建所需的系统依赖
+      - name: Install Linux dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      # 5. 激活 fastforge 命令行工具
+      - name: Activate FastForge
+        run: dart pub global activate fastforge
+
+      # 6. 核心步骤：执行构建、打包和发布
+      - name: Run FastForge Release
+        env:
+          # GITHUB_TOKEN 是 fastforge 向 GitHub API 进行身份验证的令牌
+          # secrets.GITHUB_TOKEN 由 GitHub Actions 自动提供，无需手动创建
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # 将 GitHub 仓库信息传递给 fastforge.yaml
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO_NAME: ${{ github.event.repository.name }}
+
+        # 运行 fastforge 命令，它会完成剩下的所有事
+        run: fastforge release --name production-release --platform ${{ matrix.target }} --tag ${{ github.ref_name }}
