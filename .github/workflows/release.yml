@@ -1,6 +1,6 @@
 # .github/workflows/release.yml
 # -----------------------------------------------------------------
-# 这是驱动自动化流程的"引擎"。
+# 这是已修正问题的最终工作流版本。
 
 name: Build and Publish with FastForge
 
@@ -59,16 +59,24 @@ jobs:
       - name: Activate FastForge
         run: dart pub global activate fastforge
 
-      # 6. 核心步骤：执行构建、打包和发布
+      # 6. 核心步骤：执行构建、打包和发布 (使用正确的 --jobs 参数)
       - name: Run FastForge Release
         env:
-          # GITHUB_TOKEN 是 fastforge 向 GitHub API 进行身份验证的令牌
-          # secrets.GITHUB_TOKEN 由 GitHub Actions 自动提供，无需手动创建
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          # 将 GitHub 仓库信息传递给 fastforge.yaml
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           GITHUB_REPO_NAME: ${{ github.event.repository.name }}
 
-        # 运行 fastforge 命令，它会完成剩下的所有事
-        run: fastforge release --name production-release --platform ${{ matrix.target }} --tag ${{ github.ref_name }}
+        # 这个脚本会根据当前运行的平台，动态构建出正确的 --jobs 参数
+        run: |
+          if [[ "${{ matrix.target }}" == "linux" ]]; then
+            JOBS_TO_RUN="linux-zip"
+          elif [[ "${{ matrix.target }}" == "macos" ]]; then
+            JOBS_TO_RUN="macos-dmg,macos-zip"
+          elif [[ "${{ matrix.target }}" == "windows" ]]; then
+            JOBS_TO_RUN="windows-exe,windows-zip"
+          fi
+
+          echo "Running jobs: $JOBS_TO_RUN for platform ${{ matrix.target }}"
+
+          # 执行正确的 fastforge 命令
+          fastforge release --name production-release --jobs="$JOBS_TO_RUN"
