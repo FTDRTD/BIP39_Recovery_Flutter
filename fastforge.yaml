@@ -1,0 +1,21 @@
+# fastforge.yaml (放置在项目根目录)
+name: bip39_recovery # 您的应用名称
+version: auto # 自动从 pubspec.yaml 读取版本号
+
+build:
+  # 定义所有需要构建的平台
+  platforms:
+    - linux
+    - macos
+    - windows
+
+# 定义发布配置
+release:
+  # 定义 GitHub 发布配置
+  github:
+    # 自动使用触发工作流的 tag
+    tag_name: ${{ env.GITHUB_REF_NAME }}
+    # 自动生成发布说明
+    generate_release_notes: true
+    # 上传二进制文件
+    upload_binary: true
