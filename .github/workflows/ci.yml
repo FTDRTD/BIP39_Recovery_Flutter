@@ -141,7 +141,7 @@ jobs:
       - name: 压缩 Linux 可执行文件
         run: |
           cd artifacts/linux-executable
-          tar -czf linux-executable.tar.gz .
+          tar --warning=no-file-changed -czf linux-executable.tar.gz .
           mv linux-executable.tar.gz ../../
 
       - name: 创建并上传发行版
