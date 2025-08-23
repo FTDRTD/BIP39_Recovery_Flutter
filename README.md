@@ -11,7 +11,7 @@ A secure, offline BIP39 mnemonic recovery tool built with Flutter. This applicat
 - **Multi-language Support**: Available in English and Chinese
 - **Multiple Length Support**: Supports 12, 18, and 24-word seed phrases
 - **BIP39 Standard Compliant**: Uses the official BIP39 English wordlist (2048 words)
-- **Cross-platform**: Built with Flutter for iOS, Android, Windows, macOS, and Linux
+- **Cross-platform**: Built with Flutter for iOS, Android, Windows, and Linux
 
 ## How It Works
 
