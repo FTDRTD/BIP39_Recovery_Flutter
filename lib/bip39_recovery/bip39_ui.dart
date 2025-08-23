@@ -3,7 +3,7 @@ import 'package:bip39_recovery_flutter/bip39_recovery/theme.dart';
 import 'package:bip39_recovery_flutter/bip39_recovery/bip39_logic.dart';
 
 // TODO: Implement internationalization (i18n)
-Map<String, Map<String, String>> LANGUAGES = {
+Map<String, Map<String, String>> languages = {
   "en": {
     "window_title": "Offline BIP39 Mnemonic Recovery Tool",
     "welcome_header": "BIP39 Mnemonic Recovery",
@@ -109,8 +109,8 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
         // Handle wordlist loading error, e.g., show an alert
         _showMessage(
           'Error',
-          LANGUAGES['en']!['wordlist_file_error_title']!,
-          LANGUAGES['en']!['wordlist_not_found']!.replaceFirst('{filename}', Bip39Logic.wordlistPath),
+          languages['en']!['wordlist_file_error_title']!,
+          languages['en']!['wordlist_not_found']!.replaceFirst('{filename}', Bip39Logic.wordlistPath),
         );
       }
     });
@@ -124,7 +124,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
   }
 
   void _initializeLanguage() {
-    T = (key) => LANGUAGES[_currentLang]![key] ?? key;
+    T = (key) => languages[_currentLang]![key] ?? key;
   }
 
   void _setLanguage(String langCode) {
@@ -136,7 +136,6 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
 
   void _showMessage(String level, String title, String message) {
     // TODO: Implement a proper Flutter dialog for messages
-    print('[$level] $title: $message');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

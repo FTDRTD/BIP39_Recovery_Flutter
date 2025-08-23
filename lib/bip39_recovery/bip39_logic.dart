@@ -23,14 +23,12 @@ class Bip39Logic {
 
       if (words.length != 2048) {
         // TODO: Handle error - invalid wordlist length
-        print('Error: Wordlist has ${words.length} words, expected 2048.');
         return null;
       }
       _wordlist = words;
       return _wordlist;
     } catch (e) {
       // TODO: Handle error - file read error
-      print('Error loading wordlist: $e');
       return null;
     }
   }
