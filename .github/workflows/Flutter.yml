@@ -1,40 +1,32 @@
 # 工作流名称
-name: Build and Release Flutter App
+name: Build and Release with FastForge
 
 # 触发条件
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+" # 仅在推送 vX.Y.Z 格式的 tag 时触发, 例如 v1.2.3
+      - "v[0-9]+.[0-9]+.[0-9]+" # 仅在推送 vX.Y.Z 格式的 tag 时触发
   workflow_dispatch: # 允许在 Actions 页面手动触发
 
 jobs:
-  # ------------------- 跨平台桌面构建 -------------------
-  build_desktop:
-    name: Build for ${{ matrix.os }}
+  # 使用 FastForge 进行一键构建和发布
+  build_and_release:
+    name: Build and Release for ${{ matrix.os }}
+    # 在不同平台的虚拟机上运行
     runs-on: ${{ matrix.os }}
 
+    # 构建矩阵
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        # 针对不同平台定义构建目标
         include:
           - os: ubuntu-latest
-            build_target: linux
-            artifact_name: bip39-recovery-linux
-            asset_path: build/linux/x64/release/bundle
-            asset_name: bip39-recovery-linux.zip
-
+            target: linux
           - os: macos-latest
-            build_target: macos
-            artifact_name: bip39-recovery-macos
-            asset_path: build/macos/Build/Products/Release
-            asset_name: bip39-recovery-macos.zip
-
+            target: macos
           - os: windows-latest
-            build_target: windows
-            artifact_name: bip39-recovery-windows
-            asset_path: build/windows/x64/runner/Release
-            asset_name: bip39-recovery-windows.zip
+            target: windows
 
     steps:
       - name: Checkout repository
@@ -49,62 +41,61 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # 在 Linux 环境安装必要的构建依赖
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 
-      - name: Build Flutter app for ${{ matrix.build_target }}
-        run: flutter build ${{ matrix.build_target }} --release
+      # 激活 FastForge 工具
+      - name: Activate FastForge
+        run: dart pub global activate fastforge
 
-      - name: Archive Release Asset (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          cd ${{ matrix.asset_path }}
-          zip -r ../../../${{ matrix.asset_name }} *.app
+      # 使用 FastForge 进行构建
+      # 它会自动根据平台执行 flutter build [linux|macos|windows] --release
+      # 并且会自动将产物打包成正确的格式 (zip/dmg)
+      - name: Build with FastForge
+        run: fastforge build ${{ matrix.target }}
 
-      - name: Archive Release Asset (Linux/Windows)
-        if: matrix.os != 'macos-latest'
-        run: |
-          cd ${{ matrix.asset_path }}
-          zip -r ../../../${{ matrix.asset_name }} .
-
-      - name: Upload artifact
+      # 上传构建好的产物，以便后续发布步骤使用
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: build/${{ matrix.build_target }}/${{ matrix.asset_name }}
+          # 使用平台名称作为产物名，例如 "linux-release"
+          name: ${{ matrix.target }}-release
+          # fastforge 会将所有产物统一放在 build/dist 目录下
+          path: build/dist
 
-  # ------------------- 创建 GitHub Release -------------------
+  # 创建 GitHub Release 并上传所有产物
   create_release:
     name: Create GitHub Release
+    # 仅在推送 tag 时运行
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: [build_desktop] # 依赖所有桌面构建任务
+    # 依赖所有平台的构建任务
+    needs: [build_and_release]
     runs-on: ubuntu-latest
     permissions:
       contents: write # 必须赋予写权限来创建 Release
 
     steps:
-      - name: Download all build artifacts
+      # 从之前的任务中下载所有构建好的产物
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts # 下载到 artifacts 目录
+          path: artifacts # 所有产物都会被下载到 artifacts 目录下
 
       - name: List downloaded files (for debugging)
         run: ls -R artifacts
 
-      - name: Create GitHub Release and Upload Assets
-        uses: softprops/action-gh-release@v2
-        with:
-          # 使用 tag 名称作为发布版本号, 例如 "v1.0.0"
-          tag_name: ${{ github.ref_name }}
-          # 发布的标题, 例如 "Release v1.0.0"
-          name: "Release ${{ github.ref_name }}"
-          # 自动生成发布说明
-          generate_release_notes: true
-          # 使用通配符匹配所有平台的压缩包
-          files: |
-            artifacts/bip39-recovery-windows/*.zip
-            artifacts/bip39-recovery-macos/*.zip
-            artifacts/bip39-recovery-linux/*.zip
+      # 激活 FastForge
+      - name: Activate FastForge
+        run: dart pub global activate fastforge
+
+      # 使用 FastForge 一键创建 Release 并上传所有产物
+      - name: Create GitHub Release with FastForge
+        # 需要 GitHub Token 来授权 FastForge 操作 Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # fastforge release 会自动查找 artifacts 目录下的所有产物并上传
+        run: fastforge release github --from-artifacts artifacts
