@@ -144,11 +144,14 @@ jobs:
           tar --warning=no-file-changed -czf linux-executable.tar.gz .
           mv linux-executable.tar.gz ../../
 
+      - name: 获取应用版本
+        run: echo "APP_VERSION=$(grep 'version:' pubspec.yaml | awk '{print $2}' | tr -d '\r')" >> $GITHUB_ENV
+
       - name: 创建并上传发行版
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: release-${{ github.sha }}
-          name: Release ${{ github.sha }}
+          tag_name: v${{ env.APP_VERSION }}
+          name: Release v${{ env.APP_VERSION }}
           draft: false
           prerelease: false
           files: |
