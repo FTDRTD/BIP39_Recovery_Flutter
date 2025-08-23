@@ -1,0 +1,67 @@
+# fastforge.yaml
+# -----------------------------------------------------------------
+# 这是您项目的构建和发布"蓝图"。
+
+# 定义所有构建产物的最终输出目录。
+# fastforge 会自动创建它，并将 .zip, .dmg 等文件放入其中。
+output: dist/
+
+# 定义一个名为 "production-release" 的发布流程。
+# 这是我们将在工作流中调用的名称。
+releases:
+  - name: production-release
+    jobs:
+      # --- Linux 平台的任务 ---
+      - name: linux-zip # 打包成 .zip 文件
+        package:
+          platform: linux
+          target: zip
+        # 定义发布目标为 GitHub
+        publish:
+          target: github
+          args:
+            # 从 GitHub Actions 的环境变量中自动获取仓库信息，无需硬编码
+            repo-owner: ${{ env.GITHUB_REPOSITORY_OWNER }}
+            repo-name: ${{ env.GITHUB_REPO_NAME }}
+
+      # --- macOS 平台的任务 ---
+      - name: macos-dmg # 打包成 .dmg 磁盘映像
+        package:
+          platform: macos
+          target: dmg
+        publish:
+          target: github
+          args:
+            repo-owner: ${{ env.GITHUB_REPOSITORY_OWNER }}
+            repo-name: ${{ env.GITHUB_REPO_NAME }}
+
+      - name: macos-zip # 同时打包一份 .zip 文件
+        package:
+          platform: macos
+          target: zip
+        publish:
+          target: github
+          args:
+            repo-owner: ${{ env.GITHUB_REPOSITORY_OWNER }}
+            repo-name: ${{ env.GITHUB_REPO_NAME }}
+
+      # --- Windows 平台的任务 ---
+      - name: windows-exe # 打包成 .exe 安装程序
+        package:
+          platform: windows
+          target: exe
+        publish:
+          target: github
+          args:
+            repo-owner: ${{ env.GITHUB_REPOSITORY_OWNER }}
+            repo-name: ${{ env.GITHUB_REPO_NAME }}
+            
+      - name: windows-zip # 同时打包一份 .zip 文件
+        package:
+          platform: windows
+          target: zip
+        publish:
+          target: github
+          args:
+            repo-owner: ${{ env.GITHUB_REPOSITORY_OWNER }}
+            repo-name: ${{ env.GITHUB_REPO_NAME }}
