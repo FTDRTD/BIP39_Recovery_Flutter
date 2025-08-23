@@ -1,4 +1,4 @@
-name: Flutter CI/CD - Android, Windows, Linux
+name: Flutter CI/CD - Android, Windows, Linux, macOS
 
 on:
   push:
@@ -45,6 +45,46 @@ jobs:
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 5
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable" # 自动使用最新的稳定版本
+
+      - name: 缓存 Flutter 依赖
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ${{ github.workspace }}/flutter
+          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+
+      - name: 安装依赖
+        run: flutter pub get
+
+      - name: 启用 macOS 桌面支持
+        run: flutter config --enable-macos-desktop
+
+      - name: 构建 macOS 应用程序
+        run: flutter build macos --release
+
+      - name: 创建 macOS 压缩包
+        run: |
+          cd build/macos/Build/Products/Release
+          tar -czf ../../../../../macos-release.tar.gz *.app
+
+      - name: 上传 macOS 应用程序
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: macos-release.tar.gz
           retention-days: 5
 
   build-windows:
@@ -134,7 +174,7 @@ jobs:
           retention-days: 5
 
   create-release:
-    needs: [build-android, build-windows, build-linux]
+    needs: [build-android, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -182,5 +222,6 @@ jobs:
             artifacts/android-apk/app-release.apk
             artifacts/windows-exe/windows-release.zip
             artifacts/linux-executable/linux-release.tar.gz
+            artifacts/macos-app/macos-release.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
