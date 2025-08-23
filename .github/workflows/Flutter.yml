@@ -2,9 +2,9 @@
 name: Build and Release Flutter App
 
 # 触发条件
-于:
+on:
   push:
-    标签:
+    tags:
       - "v[0-9]+.[0-9]+.[0-9]+" # 仅在推送 vX.Y.Z 格式的 tag 时触发, 例如 v1.2.3
   workflow_dispatch: # 允许在 Actions 页面手动触发
 
