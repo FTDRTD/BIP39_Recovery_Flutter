@@ -18,7 +18,7 @@ jobs:
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable" # 自动使用最新的稳定版本
+          channel: "stable"  # 自动使用最新的稳定版本
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
@@ -96,7 +96,7 @@ jobs:
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable" # 自动使用最新的稳定版本
+          channel: "stable"  # 自动使用最新的稳定版本
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
@@ -137,7 +137,7 @@ jobs:
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable" # 自动使用最新的稳定版本
+          channel: "stable"  # 自动使用最新的稳定版本
 
       - name: 安装 Linux 依赖
         run: |
@@ -192,36 +192,116 @@ jobs:
       - name: 获取应用版本
         id: get_version
         run: |
+          if [ ! -f pubspec.yaml ]; then
+            echo "❌ pubspec.yaml 文件不存在"
+            exit 1
+          fi
+          
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | tr -d '\r' | cut -d'+' -f1)
+          
+          if [ -z "$VERSION" ]; then
+            echo "❌ 无法从 pubspec.yaml 中获取版本号"
+            echo "请确保 pubspec.yaml 中包含类似 'version: 1.0.0' 的行"
+            exit 1
+          fi
+          
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Version found: $VERSION"
+          echo "✅ 找到版本号: $VERSION"
 
       - name: 检查是否已存在该版本的 release
         id: check_release
+        continue-on-error: true
         run: |
+          echo "🔍 检查版本 v${{ env.APP_VERSION }} 是否已存在..."
+          
           if gh release view "v${{ env.APP_VERSION }}" >/dev/null 2>&1; then
-            echo "Release v${{ env.APP_VERSION }} already exists, skipping..."
+            echo "⚠️ Release v${{ env.APP_VERSION }} 已存在，跳过创建"
             echo "skip_release=true" >> $GITHUB_OUTPUT
           else
-            echo "Release v${{ env.APP_VERSION }} does not exist, proceeding..."
+            echo "✅ Release v${{ env.APP_VERSION }} 不存在，继续创建"
             echo "skip_release=false" >> $GITHUB_OUTPUT
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 验证工件文件
+        run: |
+          echo "📦 验证下载的工件文件..."
+          
+          # 检查 Android APK
+          if [ -f "artifacts/android-apk/app-release.apk" ]; then
+            echo "✅ Android APK 文件存在: $(ls -lh artifacts/android-apk/app-release.apk)"
+          else
+            echo "❌ Android APK 文件不存在"
+          fi
+          
+          # 检查 Windows ZIP
+          if [ -f "artifacts/windows-exe/windows-release.zip" ]; then
+            echo "✅ Windows ZIP 文件存在: $(ls -lh artifacts/windows-exe/windows-release.zip)"
+          else
+            echo "❌ Windows ZIP 文件不存在"
+          fi
+          
+          # 检查 Linux TAR.GZ
+          if [ -f "artifacts/linux-executable/linux-release.tar.gz" ]; then
+            echo "✅ Linux TAR.GZ 文件存在: $(ls -lh artifacts/linux-executable/linux-release.tar.gz)"
+          else
+            echo "❌ Linux TAR.GZ 文件不存在"
+          fi
+          
+          # 检查 macOS TAR.GZ
+          if [ -f "artifacts/macos-app/macos-release.tar.gz" ]; then
+            echo "✅ macOS TAR.GZ 文件存在: $(ls -lh artifacts/macos-app/macos-release.tar.gz)"
+          else
+            echo "❌ macOS TAR.GZ 文件不存在"
+          fi
+
       - name: 创建并上传发行版
-        if: steps.check_release.outputs.skip_release == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.APP_VERSION }}
-          name: Release v${{ env.APP_VERSION }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            artifacts/android-apk/app-release.apk
-            artifacts/windows-exe/windows-release.zip
-            artifacts/linux-executable/linux-release.tar.gz
-            artifacts/macos-app/macos-release.tar.gz
+        if: steps.check_release.outputs.skip_release != 'true'
+        run: |
+          echo "🚀 开始创建 Release v${{ env.APP_VERSION }}..."
+          
+          # 准备发布文件列表
+          FILES=""
+          if [ -f "artifacts/android-apk/app-release.apk" ]; then
+            FILES="$FILES artifacts/android-apk/app-release.apk"
+          fi
+          if [ -f "artifacts/windows-exe/windows-release.zip" ]; then
+            FILES="$FILES artifacts/windows-exe/windows-release.zip"
+          fi
+          if [ -f "artifacts/linux-executable/linux-release.tar.gz" ]; then
+            FILES="$FILES artifacts/linux-executable/linux-release.tar.gz"
+          fi
+          if [ -f "artifacts/macos-app/macos-release.tar.gz" ]; then
+            FILES="$FILES artifacts/macos-app/macos-release.tar.gz"
+          fi
+          
+          if [ -z "$FILES" ]; then
+            echo "❌ 没有找到任何可发布的文件"
+            exit 1
+          fi
+          
+          echo "📁 准备发布的文件: $FILES"
+          
+          # 创建 Release
+          gh release create "v${{ env.APP_VERSION }}" \
+            --title "Release v${{ env.APP_VERSION }}" \
+            --notes "🎉 自动构建发布 v${{ env.APP_VERSION }}
+
+## 📦 包含的平台
+- 🤖 **Android APK** - 适用于 Android 设备
+- 🪟 **Windows ZIP** - 适用于 Windows 桌面
+- 🐧 **Linux TAR.GZ** - 适用于 Linux 桌面
+- 🍎 **macOS TAR.GZ** - 适用于 macOS 桌面
+
+## 🔨 构建信息
+- **构建时间**: $(date)
+- **提交**: ${{ github.sha }}
+- **分支**: ${{ github.ref_name }}
+
+*此版本由 GitHub Actions 自动构建和发布*" \
+            $FILES
+            
+          echo "✅ Release v${{ env.APP_VERSION }} 创建成功！"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
