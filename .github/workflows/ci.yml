@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录用于生成更新日志
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
@@ -52,6 +54,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
@@ -93,6 +97,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
@@ -140,6 +146,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录用于生成更新日志
 
       - name: 下载所有工件
         uses: actions/download-artifact@v4
@@ -169,18 +177,90 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 获取上一个 release 标签
+        id: get_previous_tag
+        if: steps.check_release.outputs.skip_release == 'false'
+        run: |
+          PREVIOUS_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # 如果没有之前的 release，使用第一个 commit
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
+          echo "Previous tag: $PREVIOUS_TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成更新日志
+        id: generate_changelog
+        if: steps.check_release.outputs.skip_release == 'false'
+        run: |
+          echo "## 🚀 更新内容" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          # 获取提交信息并分类
+          echo "### ✨ 新功能" >> CHANGELOG.md
+          git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="feat\|add\|new" --grep="功能\|新增" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无新功能更新" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          echo "### 🐛 错误修复" >> CHANGELOG.md
+          git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="fix\|bug" --grep="修复\|修正" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无错误修复" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          echo "### 🔧 优化改进" >> CHANGELOG.md
+          git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="improve\|enhance\|optimize" --grep="优化\|改进\|提升" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无优化改进" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          echo "### 📚 文档更新" >> CHANGELOG.md
+          git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="docs\|doc\|readme" --grep="文档" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无文档更新" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          echo "### 🔄 其他更改" >> CHANGELOG.md
+          # 排除已分类的提交
+          git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --invert-grep \
+            --grep="feat\|add\|new\|功能\|新增" \
+            --grep="fix\|bug\|修复\|修正" \
+            --grep="improve\|enhance\|optimize\|优化\|改进\|提升" \
+            --grep="docs\|doc\|readme\|文档" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无其他更改" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          echo "---" >> CHANGELOG.md
+          echo "**构建信息:**" >> CHANGELOG.md
+          echo "- 构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> CHANGELOG.md
+          echo "- Commit: $(git rev-parse --short HEAD)" >> CHANGELOG.md
+          echo "- Flutter 版本: $(flutter --version | head -n 1)" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**支持平台:**" >> CHANGELOG.md
+          echo "- 🤖 Android (APK)" >> CHANGELOG.md
+          echo "- 🪟 Windows (ZIP)" >> CHANGELOG.md
+          echo "- 🐧 Linux (TAR.GZ)" >> CHANGELOG.md
+          
+          # 输出生成的更新日志用于调试
+          echo "生成的更新日志:"
+          cat CHANGELOG.md
+
       - name: 创建并上传发行版
         if: steps.check_release.outputs.skip_release == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.APP_VERSION }}
           name: Release v${{ env.APP_VERSION }}
+          body_path: CHANGELOG.md
           draft: false
           prerelease: false
-          generate_release_notes: true
           files: |
             artifacts/android-apk/app-release.apk
             artifacts/windows-exe/windows-release.zip
             artifacts/linux-executable/linux-release.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 发布成功通知
+        if: steps.check_release.outputs.skip_release == 'false'
+        run: |
+          echo "🎉 Release v${{ env.APP_VERSION }} 创建成功!"
+          echo "📦 包含以下文件:"
+          echo "  - Android APK"
+          echo "  - Windows ZIP"
+          echo "  - Linux TAR.GZ"
+          echo "🔗 查看发布: https://github.com/${{ github.repository }}/releases/tag/v${{ env.APP_VERSION }}"
