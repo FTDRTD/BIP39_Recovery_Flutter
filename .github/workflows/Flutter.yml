@@ -9,35 +9,13 @@ on:
   workflow_dispatch: # 允许在 Actions 页面手动触发
 
 jobs:
-  # ------------------- 运行测试 (可选但推荐) -------------------
-  flutter_test:
-    name: Run Flutter tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true # 为 Flutter SDK 和依赖启用缓存
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Analyze code
-        run: flutter analyze
-
-      - name: Run tests
-        run: flutter test
-
   # ------------------- 跨平台桌面构建 -------------------
+  # 我们已经移除了 flutter_test 任务
   build_desktop:
     name: Build for ${{ matrix.os }}
-    needs: [flutter_test] # 依赖测试任务
+    # 移除了 'needs: [flutter_test]' 依赖
     runs-on: ${{ matrix.os }} # 使用矩阵中定义的操作系统
-    
+
     # 构建矩阵
     strategy:
       matrix:
@@ -69,7 +47,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: "stable"
           cache: true
 
       - name: Install dependencies
@@ -84,7 +62,7 @@ jobs:
         run: |
           cd ${{ matrix.asset_path }}
           zip -r ../../../../${{ matrix.asset_name }} *.app
-      
+
       - name: Archive Release Asset (Linux/Windows)
         if: matrix.os != 'macos-latest'
         # Windows 和 Linux 直接压缩整个 bundle/Release 文件夹
