@@ -1,0 +1,132 @@
+# 工作流名称
+name: Build and Release Flutter App
+
+# 触发条件
+于:
+  push:
+    标签:
+      - "v[0-9]+.[0-9]+.[0-9]+" # 仅在推送 vX.Y.Z 格式的 tag 时触发, 例如 v1.2.3
+  workflow_dispatch: # 允许在 Actions 页面手动触发
+
+jobs:
+  # ------------------- 运行测试 (可选但推荐) -------------------
+  flutter_test:
+    name: Run Flutter tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true # 为 Flutter SDK 和依赖启用缓存
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+  # ------------------- 跨平台桌面构建 -------------------
+  build_desktop:
+    name: Build for ${{ matrix.os }}
+    needs: [flutter_test] # 依赖测试任务
+    runs-on: ${{ matrix.os }} # 使用矩阵中定义的操作系统
+    
+    # 构建矩阵
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # 定义不同平台的构建目标和产物路径
+        include:
+          - os: ubuntu-latest
+            build_target: linux
+            artifact_name: bip39-recovery-linux
+            asset_path: build/linux/x64/release/bundle
+            asset_name: bip39-recovery-linux.zip
+
+          - os: macos-latest
+            build_target: macos
+            artifact_name: bip39-recovery-macos
+            asset_path: build/macos/Build/Products/Release
+            asset_name: bip39-recovery-macos.zip
+
+          - os: windows-latest
+            build_target: windows
+            artifact_name: bip39-recovery-windows
+            asset_path: build/windows/runner/Release
+            asset_name: bip39-recovery-windows.zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Flutter app for ${{ matrix.build_target }}
+        run: flutter build ${{ matrix.build_target }} --release
+
+      - name: Archive Release Asset (macOS)
+        if: matrix.os == 'macos-latest'
+        # macOS 会生成一个 .app 文件夹，需要将其压缩成 zip
+        run: |
+          cd ${{ matrix.asset_path }}
+          zip -r ../../../../${{ matrix.asset_name }} *.app
+      
+      - name: Archive Release Asset (Linux/Windows)
+        if: matrix.os != 'macos-latest'
+        # Windows 和 Linux 直接压缩整个 bundle/Release 文件夹
+        run: |
+          cd ${{ matrix.asset_path }}
+          zip -r ../../../../${{ matrix.asset_name }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: build/${{ matrix.build_target }}/${{ matrix.asset_name }}
+
+  # ------------------- 创建 GitHub Release -------------------
+  create_release:
+    name: Create GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: [build_desktop] # 依赖所有桌面构建任务
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须赋予写权限来创建 Release
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts # 下载到 artifacts 目录
+
+      - name: List downloaded files (for debugging)
+        run: ls -R artifacts
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          # 使用 tag 名称作为发布版本号, 例如 "v1.0.0"
+          tag_name: ${{ github.ref_name }}
+          # 发布的标题, 例如 "Release v1.0.0"
+          name: "Release ${{ github.ref_name }}"
+          # 自动生成发布说明
+          generate_release_notes: true
+          # 使用通配符匹配所有平台的压缩包
+          files: |
+            artifacts/bip39-recovery-windows/*.zip
+            artifacts/bip39-recovery-macos/*.zip
+            artifacts/bip39-recovery-linux/*.zip
