@@ -28,24 +28,27 @@
 ## 安装说明
 
 ### 前置要求
+
 - Flutter SDK (3.9.0 或更高版本)
 - Dart SDK
 - Android Studio / Xcode (用于移动端开发)
 - VS Code 或 Android Studio
 
 ### 设置步骤
+
 1. 克隆此仓库：
+
    ```bash
    git clone [repository-url]
    cd bip39_recovery_flutter
    ```
-
 2. 安装依赖：
+
    ```bash
    flutter pub get
    ```
-
 3. 运行应用程序：
+
    ```bash
    flutter run
    ```
@@ -66,19 +69,23 @@ lib/
 ## 使用指南
 
 ### 开始恢复
+
 1. 启动应用程序
 2. 选择您的首选语言（English/中文）
 3. 选择您的种子短语长度（12、18或24个单词）
 4. 点击相应按钮开始
 
 ### 恢复单词
+
 1. 对于每个单词位置，输入数字总和等于单词索引+1
 2. 有效数字是2的幂：1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
 3. 工具会在您添加数字时显示对应的单词
 4. 点击"确认单词并继续"进入下一个单词
 
 ### 示例
+
 要恢复索引5的单词（列表中的第6个单词）：
+
 - 输入：1, 4 (1 + 4 = 5)
 - 工具将显示对应的BIP39单词
 - 确认并移动到下一个单词
@@ -86,16 +93,19 @@ lib/
 ## 生产环境构建
 
 ### Android APK
+
 ```bash
 flutter build apk --release
 ```
 
 ### iOS App Store
+
 ```bash
 flutter build ios --release
 ```
 
 ### 桌面应用程序
+
 ```bash
 # Windows
 flutter build windows --release
@@ -129,7 +139,7 @@ flutter build linux --release
 
 ## 许可证
 
-此项目是开源项目。有关详细信息，请参阅LICENSE文件。
+此项目采用MIT许可证授权 - 有关详细信息，请参阅 [LICENSE](LICENSE) 文件。
 
 ## 免责声明
 

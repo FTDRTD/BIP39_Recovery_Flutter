@@ -28,24 +28,27 @@ A secure, offline BIP39 mnemonic recovery tool built with Flutter. This applicat
 ## Installation
 
 ### Prerequisites
+
 - Flutter SDK (3.9.0 or higher)
 - Dart SDK
 - Android Studio / Xcode (for mobile development)
 - VS Code or Android Studio
 
 ### Setup
+
 1. Clone this repository:
+
    ```bash
    git clone [repository-url]
    cd bip39_recovery_flutter
    ```
-
 2. Install dependencies:
+
    ```bash
    flutter pub get
    ```
-
 3. Run the application:
+
    ```bash
    flutter run
    ```
@@ -66,19 +69,23 @@ lib/
 ## Usage Guide
 
 ### Starting Recovery
+
 1. Launch the application
 2. Select your preferred language (English/Chinese)
 3. Choose your seed phrase length (12, 18, or 24 words)
 4. Click the corresponding button to begin
 
 ### Recovering Words
+
 1. For each word position, enter numbers that sum to the word's index + 1
 2. Valid numbers are powers of 2: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
 3. The tool will display the corresponding word as you add numbers
 4. Click "Confirm Word & Next" to proceed to the next word
 
 ### Example
+
 To recover the word at index 5 (the 6th word in the list):
+
 - Enter: 1, 4 (1 + 4 = 5)
 - The tool will display the corresponding BIP39 word
 - Confirm and move to the next word
@@ -86,16 +93,19 @@ To recover the word at index 5 (the 6th word in the list):
 ## Building for Production
 
 ### Android APK
+
 ```bash
 flutter build apk --release
 ```
 
 ### iOS App Store
+
 ```bash
 flutter build ios --release
 ```
 
 ### Desktop Applications
+
 ```bash
 # Windows
 flutter build windows --release
@@ -129,7 +139,7 @@ flutter build linux --release
 
 ## License
 
-This project is open source. Please refer to the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Disclaimer
 
