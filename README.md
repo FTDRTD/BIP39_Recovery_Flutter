@@ -84,13 +84,17 @@ lib/
 3. The tool will display the corresponding word as you add numbers
 4. Click "Confirm Word & Next" to proceed to the next word
 
-### Example
-
-To recover the word at index 5 (the 6th word in the list):
-
-- Enter: 1, 4 (1 + 4 = 5)
-- The tool will display the corresponding BIP39 word
-- Confirm and move to the next word
+> ### ⚠️ ![Warning](https://img.shields.io/badge/Warning-Critical-red)
+>
+> **Example:** When recovering the mnemonic word at index **5** (the 6th word in the list):
+>
+> - Enter: `1, 4, 1` ( → `1 + 4 + 1 = 6`)
+> - The tool will display the corresponding **BIP39 word**
+> - Confirm and proceed to the next word
+>
+> For example, to recover **sheriff**:  `4 + 8 + 32 + 512 + 1024 + 1`
+>
+> ![1755951640025](image/README/1755951640025.png)
 
 ## Building for Production
 
