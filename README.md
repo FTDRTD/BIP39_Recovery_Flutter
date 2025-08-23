@@ -1,5 +1,7 @@
 # BIP39 Recovery Tool (Flutter)
 
+> **[中文版 (Chinese Version)](README_cn.md)**
+
 A secure, offline BIP39 mnemonic recovery tool built with Flutter. This application helps users recover their BIP39 seed phrases in a completely offline environment, ensuring maximum security and privacy.
 
 ## Features
