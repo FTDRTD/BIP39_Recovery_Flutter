@@ -11,7 +11,7 @@
 - **多语言支持**: 支持英文和中文界面
 - **多种长度支持**: 支持12、18、24个单词的种子短语
 - **BIP39标准兼容**: 使用官方BIP39英文词表（2048个单词）
-- **跨平台**: 使用Flutter构建，支持iOS、Android、Windows和Linux
+- **跨平台**: 使用Flutter构建，支持Android、Windows和Linux
 
 ## 工作原理
 
