@@ -606,6 +606,7 @@ class BIP39RecoveryApp(QMainWindow):
             )
         finally:
             self.number_entry.clear()
+            self.number_entry.setFocus()
 
     def process_next_word(self) -> None:
         """确认当前单词并进入下一个单词的恢复流程。"""
