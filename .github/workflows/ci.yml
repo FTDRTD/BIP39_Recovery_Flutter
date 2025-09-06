@@ -15,12 +15,12 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取完整历史记录用于生成更新日志
+          fetch-depth: 0
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable" # 自动使用最新的稳定版本
+          channel: "stable"
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
@@ -55,12 +55,12 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取完整历史记录
+          fetch-depth: 0
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable" # 自动使用最新的稳定版本
+          channel: "stable"
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
@@ -93,9 +93,9 @@ jobs:
           retention-days: 5
 
   build-linux:
-    runs-on: ubuntu-latest # Runner 主机保持最新，但我们的步骤将在下面的容器中运行
+    runs-on: ubuntu-latest
     container:
-      image: ubuntu:20.04 # 使用旧版系统容器以保证兼容性
+      image: ubuntu:20.04
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -106,6 +106,7 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            curl \
             jq \
             bash \
             clang \
@@ -164,7 +165,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取完整历史记录用于生成更新日志
+          fetch-depth: 0
 
       - name: 下载所有工件
         uses: actions/download-artifact@v4
@@ -200,7 +201,6 @@ jobs:
         run: |
           PREVIOUS_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
           if [ -z "$PREVIOUS_TAG" ]; then
-            # 如果没有之前的 release，使用第一个 commit
             PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
           echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
@@ -232,7 +232,6 @@ jobs:
           echo "" >> CHANGELOG.md
 
           echo "### 🔄 其他更改" >> CHANGELOG.md
-          # 排除已分类的提交
           git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --invert-grep \
             --grep="feat\|add\|new\|功能\|新增" \
             --grep="fix\|bug\|修复\|修正" \
@@ -251,8 +250,6 @@ jobs:
           echo "- 🪟 Windows (ZIP)" >> CHANGELOG.md
           echo "- 🐧 Linux (TAR.GZ)" >> CHANGELOG.md
 
-          # 输出生成的更新日志用于调试
-          echo "生成的更新日志:"
           cat CHANGELOG.md
 
       - name: 创建并上传发行版
