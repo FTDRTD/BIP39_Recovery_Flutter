@@ -22,14 +22,6 @@ jobs:
         with:
           channel: "stable"
 
-      - name: 缓存 Flutter 依赖
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            ${{ github.workspace }}/flutter
-          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
-
       - name: 安装依赖
         run: flutter pub get
 
@@ -61,14 +53,6 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-
-      - name: 缓存 Flutter 依赖
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            ${{ github.workspace }}/flutter
-          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
 
       - name: 安装依赖
         run: flutter pub get
@@ -124,6 +108,16 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
+
+      # ==========================================================
+      # VVVV 新增的修复步骤 VVVV
+      # ==========================================================
+      - name: 将 Flutter SDK 目录标记为安全
+        run: git config --global --add safe.directory "$FLUTTER_ROOT"
+        shell: bash
+      # ==========================================================
+      # ^^^^ 新增的修复步骤 ^^^^
+      # ==========================================================
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
