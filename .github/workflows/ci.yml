@@ -15,7 +15,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录用于生成更新日志
+          fetch-depth: 0 # 获取完整历史记录用于生成更新日志
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
@@ -55,7 +55,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0 # 获取完整历史记录
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
@@ -92,31 +92,49 @@ jobs:
           path: windows-release.zip
           retention-days: 5
 
+  # ==========================================================
+  # VVVV 这是修改过的 build-linux job VVVV
+  # ==========================================================
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Runner 主机保持最新，但我们的步骤将在下面的容器中运行
+    container:
+      image: ubuntu:20.04
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0
 
       - name: 设置 Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable" # 自动使用最新的稳定版本
+          channel: "stable"
 
-      - name: 安装 Linux 依赖
+      - name: 安装 Linux 依赖 (for Ubuntu 20.04)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            bash \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev \
+            unzip \
+            git \
+            build-essential
+        shell: bash
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
         with:
           path: |
-            ~/.pub-cache
+            /root/.pub-cache
             ${{ github.workspace }}/flutter
-          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          key: flutter-linux-2004-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            flutter-linux-2004-
 
       - name: 安装依赖
         run: flutter pub get
@@ -130,7 +148,8 @@ jobs:
       - name: 创建 Linux 压缩包
         run: |
           cd build/linux/x64/release/bundle
-          tar -czf ../../../../../linux-release.tar.gz *
+          tar -czf ../../../../../linux-release.tar.gz .
+        shell: bash
 
       - name: 上传 Linux 可执行文件
         uses: actions/upload-artifact@v4
@@ -138,6 +157,9 @@ jobs:
           name: linux-executable
           path: linux-release.tar.gz
           retention-days: 5
+  # ==========================================================
+  # ^^^^ 这是修改过的 build-linux job ^^^^
+  # ==========================================================
 
   create-release:
     needs: [build-android, build-windows, build-linux]
@@ -147,7 +169,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录用于生成更新日志
+          fetch-depth: 0 # 获取完整历史记录用于生成更新日志
 
       - name: 下载所有工件
         uses: actions/download-artifact@v4
@@ -197,24 +219,23 @@ jobs:
         run: |
           echo "## 🚀 更新内容" > CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
-          # 获取提交信息并分类
+
           echo "### ✨ 新功能" >> CHANGELOG.md
           git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="feat\|add\|new" --grep="功能\|新增" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无新功能更新" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           echo "### 🐛 错误修复" >> CHANGELOG.md
           git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="fix\|bug" --grep="修复\|修正" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无错误修复" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           echo "### 🔧 优化改进" >> CHANGELOG.md
           git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="improve\|enhance\|optimize" --grep="优化\|改进\|提升" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无优化改进" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           echo "### 📚 文档更新" >> CHANGELOG.md
           git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --grep="docs\|doc\|readme" --grep="文档" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无文档更新" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           echo "### 🔄 其他更改" >> CHANGELOG.md
           # 排除已分类的提交
           git log ${{ env.PREVIOUS_TAG }}..HEAD --oneline --invert-grep \
@@ -223,7 +244,7 @@ jobs:
             --grep="improve\|enhance\|optimize\|优化\|改进\|提升" \
             --grep="docs\|doc\|readme\|文档" | sed 's/^/- /' >> CHANGELOG.md || echo "- 无其他更改" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           echo "---" >> CHANGELOG.md
           echo "**构建信息:**" >> CHANGELOG.md
           echo "- 构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> CHANGELOG.md
@@ -234,7 +255,7 @@ jobs:
           echo "- 🤖 Android (APK)" >> CHANGELOG.md
           echo "- 🪟 Windows (ZIP)" >> CHANGELOG.md
           echo "- 🐧 Linux (TAR.GZ)" >> CHANGELOG.md
-          
+
           # 输出生成的更新日志用于调试
           echo "生成的更新日志:"
           cat CHANGELOG.md
@@ -263,4 +284,4 @@ jobs:
           echo "  - Android APK"
           echo "  - Windows ZIP"
           echo "  - Linux TAR.GZ"
-          echo "🔗 查看发布: https://github.com/${{ github.repository }}/releases/tag/v${{ env.APP_VERSION }}"
+          echo "🔗 查看发布: https://github.com/${{ github.repository }}/releases/tag/v${{ env.APP_VERSION }}"```
