@@ -99,6 +99,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
   List<int> _currentWordInputs = [];
   final PageController _pageController = PageController();
   final TextEditingController _numberEntryController = TextEditingController();
+  final FocusNode _numberEntryFocus = FocusNode();
 
   @override
   void initState() {
@@ -120,6 +121,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
   void dispose() {
     _pageController.dispose();
     _numberEntryController.dispose();
+    _numberEntryFocus.dispose();
     super.dispose();
   }
 
@@ -213,12 +215,20 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
       _resetCurrentWord();
     });
     _pageController.jumpToPage(1); // Navigate to recovery page
+    // 聚焦到输入框以开始输入
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _numberEntryFocus.requestFocus();
+    });
   }
 
   void _resetCurrentWord() {
     _currentWordSum = 0;
     _currentWordInputs = [];
     _numberEntryController.clear();
+    // 重新聚焦输入框，改善连续输入体验
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _numberEntryFocus.requestFocus();
+    });
   }
 
   @override
@@ -321,6 +331,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
               Expanded(
                 child: TextField(
                   controller: _numberEntryController,
+                  focusNode: _numberEntryFocus,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: T("enter_number_label"),
@@ -429,11 +440,17 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
           T("invalid_input_title"),
           T("invalid_input_power_of_2_warning"),
         );
-      } else if (_currentWordInputs.contains(num)) {
+      } else if (_currentWordInputs.contains(num) && num != 1) {
         _showMessage(
           'warning',
           T("invalid_input_title"),
           T("duplicate_input_warning").replaceFirst('{num}', num.toString()),
+        );
+      } else if (_currentWordInputs.where((n) => n == 1).length >= 3) {
+        _showMessage(
+          'warning',
+          T("invalid_input_title"),
+          "数字1最多只能重复两次。",
         );
       } else {
         setState(() {
@@ -441,6 +458,8 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
           _currentWordInputs.sort(); // Keep inputs sorted for display
           _currentWordSum += num;
         });
+        // 重新聚焦以保持连续输入的便利性
+        _numberEntryFocus.requestFocus();
       }
     } on FormatException {
       _showMessage(
