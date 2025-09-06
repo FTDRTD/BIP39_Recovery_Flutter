@@ -92,28 +92,21 @@ jobs:
           path: windows-release.zip
           retention-days: 5
 
-  # ==========================================================
-  # VVVV 这是修改过的 build-linux job VVVV
-  # ==========================================================
   build-linux:
     runs-on: ubuntu-latest # Runner 主机保持最新，但我们的步骤将在下面的容器中运行
     container:
-      image: ubuntu:20.04
+      image: ubuntu:20.04 # 使用旧版系统容器以保证兼容性
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 设置 Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: "stable"
-
       - name: 安装 Linux 依赖 (for Ubuntu 20.04)
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            jq \
             bash \
             clang \
             cmake \
@@ -125,6 +118,11 @@ jobs:
             git \
             build-essential
         shell: bash
+
+      - name: 设置 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
 
       - name: 缓存 Flutter 依赖
         uses: actions/cache@v4
@@ -157,9 +155,6 @@ jobs:
           name: linux-executable
           path: linux-release.tar.gz
           retention-days: 5
-  # ==========================================================
-  # ^^^^ 这是修改过的 build-linux job ^^^^
-  # ==========================================================
 
   create-release:
     needs: [build-android, build-windows, build-linux]
@@ -284,4 +279,4 @@ jobs:
           echo "  - Android APK"
           echo "  - Windows ZIP"
           echo "  - Linux TAR.GZ"
-          echo "🔗 查看发布: https://github.com/${{ github.repository }}/releases/tag/v${{ env.APP_VERSION }}"```
+          echo "🔗 查看发布: https://github.com/${{ github.repository }}/releases/tag/v${{ env.APP_VERSION }}"
