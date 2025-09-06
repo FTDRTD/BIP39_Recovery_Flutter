@@ -18,8 +18,8 @@ Map<String, Map<String, String>> languages = {
     "file_read_error_title": "File Read Error",
     "file_read_error_message": "An error occurred while reading the file: {error}",
     "recovering_word_title": "Recovering Word {current} of {total}",
-    "enter_number_label": "Enter number (e.g., 2, 4, 256):",
-    "add_number_button": "Add Number",
+    "enter_number_label": "Enter numbers (e.g., 2,4,256 or single number):",
+    "add_number_button": "Add Number(s)",
     "entered_numbers_label": "Entered Numbers: {numbers}",
     "current_word_label": "Current Word: {status}",
     "status_waiting": "(waiting for input)",
@@ -55,7 +55,7 @@ Map<String, Map<String, String>> languages = {
     "file_read_error_title": "文件读取错误",
     "file_read_error_message": "读取文件时发生错误: {error}",
     "recovering_word_title": "正在恢复第 {current} / {total} 个单词",
-    "enter_number_label": "输入数字 (例如 2, 4, 256):",
+    "enter_number_label": "输入数字 (例如 2,4,256 或单个数字):",
     "add_number_button": "添加数字",
     "entered_numbers_label": "已输入的数字: {numbers}",
     "current_word_label": "当前单词: {status}",
@@ -99,6 +99,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
   List<int> _currentWordInputs = [];
   final PageController _pageController = PageController();
   final TextEditingController _numberEntryController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -120,6 +121,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
   void dispose() {
     _pageController.dispose();
     _numberEntryController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -219,6 +221,7 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
     _currentWordSum = 0;
     _currentWordInputs = [];
     _numberEntryController.clear();
+    _focusNode.requestFocus();
   }
 
   @override
@@ -321,6 +324,8 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
               Expanded(
                 child: TextField(
                   controller: _numberEntryController,
+                  focusNode: _focusNode,
+                  autofocus: true,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: T("enter_number_label"),
@@ -417,40 +422,53 @@ class _Bip39RecoveryScreenState extends State<Bip39RecoveryScreen> {
   }
 
   void _addNumber() {
-    String numStr = _numberEntryController.text.trim();
-    if (numStr.isEmpty) {
+    String input = _numberEntryController.text.trim();
+    if (input.isEmpty) {
       return;
     }
-    try {
-      int num = int.parse(numStr);
-      if (!_bip39Logic.isValidInputNumber(num)) {
-        _showMessage(
-          'warning',
-          T("invalid_input_title"),
-          T("invalid_input_power_of_2_warning"),
-        );
-      } else if (_currentWordInputs.contains(num)) {
-        _showMessage(
-          'warning',
-          T("invalid_input_title"),
-          T("duplicate_input_warning").replaceFirst('{num}', num.toString()),
-        );
-      } else {
-        setState(() {
-          _currentWordInputs.add(num);
-          _currentWordInputs.sort(); // Keep inputs sorted for display
-          _currentWordSum += num;
-        });
+
+    // Support comma or space separated numbers (e.g., "2,4,256" or "2 4 256")
+    List<String> numStrings = input.split(RegExp(r'[,\s]+'));
+    List<int> validNumbers = [];
+    List<String> invalidMessages = [];
+
+    for (String numStr in numStrings) {
+      if (numStr.isEmpty) continue;
+      try {
+        int num = int.parse(numStr.trim());
+        if (!_bip39Logic.isValidInputNumber(num)) {
+          invalidMessages.add(T("invalid_input_power_of_2_warning"));
+          continue;
+        }
+        if (_currentWordInputs.contains(num)) {
+          invalidMessages.add(T("duplicate_input_warning").replaceFirst('{num}', num.toString()));
+          continue;
+        }
+        validNumbers.add(num);
+      } on FormatException {
+        invalidMessages.add(T("invalid_input_int_warning"));
+        continue;
       }
-    } on FormatException {
-      _showMessage(
-        'warning',
-        T("invalid_input_title"),
-        T("invalid_input_int_warning"),
-      );
-    } finally {
-      _numberEntryController.clear();
     }
+
+    // Add valid numbers
+    if (validNumbers.isNotEmpty) {
+      setState(() {
+        _currentWordInputs.addAll(validNumbers);
+        _currentWordInputs.sort(); // Keep inputs sorted for display
+        _currentWordSum += validNumbers.reduce((a, b) => a + b);
+      });
+    }
+
+    // Show warnings for invalid inputs
+    if (invalidMessages.isNotEmpty && validNumbers.isEmpty) {
+      // Only show warning if no valid numbers were added
+      _showMessage('warning', T("invalid_input_title"), invalidMessages.join('\n'));
+    }
+
+    // Clear input and refocus
+    _numberEntryController.clear();
+    _focusNode.requestFocus();
   }
 
   void _processNextWord() {
